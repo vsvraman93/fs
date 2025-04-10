@@ -7,8 +7,6 @@ import json
 import os
 import base64
 from io import BytesIO
-import openpyxl
-from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 
 # Function to rerun the app based on Streamlit version
 def rerun_app():
@@ -686,471 +684,274 @@ def save_mappings():
     
     st.success('Mappings saved successfully!')
 
-# Function to apply style to Excel cell
-def apply_cell_style(cell, is_header=False, is_total=False, is_subtotal=False, indent_level=0):
-    # Set font
-    if is_header:
-        cell.font = Font(bold=True, size=12)
-    elif is_total:
-        cell.font = Font(bold=True, size=11)
-    elif is_subtotal:
-        cell.font = Font(bold=True, size=10)
-    else:
-        cell.font = Font(size=10)
-    
-    # Set alignment
-    if indent_level > 0:
-        cell.alignment = Alignment(horizontal='left', indent=indent_level)
-    else:
-        cell.alignment = Alignment(horizontal='left')
-    
-    # Set border
-    thin_border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
-    )
-    cell.border = thin_border
-    
-    # Set background for headers
-    if is_header:
-        cell.fill = PatternFill(start_color='E0E0E0', end_color='E0E0E0', fill_type='solid')
-
-# Function to export to Excel with sub-schedules
+# Function to export to Excel using pandas (more compatible than openpyxl)
 def export_to_excel():
+    # Create a BytesIO object
     output = BytesIO()
     
-    # Create a new workbook
-    wb = openpyxl.Workbook()
-    
-    # Balance Sheet
-    ws = wb.active
-    ws.title = "Balance Sheet"
-    
-    # Apply formatting to headers
-    ws['A1'] = "Financial Statements"
-    ws['A1'].font = Font(bold=True, size=14)
-    
-    ws['A2'] = "Balance Sheet as at " + datetime.now().strftime("%d-%m-%Y")
-    ws['A2'].font = Font(bold=True, size=12)
-    
-    ws['A4'] = "Particulars"
-    ws['B4'] = "Note No."
-    ws['C4'] = "Amount (₹)"
-    
-    apply_cell_style(ws['A4'], is_header=True)
-    apply_cell_style(ws['B4'], is_header=True)
-    apply_cell_style(ws['C4'], is_header=True)
-    
-    # Add data (from mapped accounts and calculated values)
-    row = 5
-    
-    # EQUITY AND LIABILITIES
-    ws[f'A{row}'] = "EQUITY AND LIABILITIES"
-    apply_cell_style(ws[f'A{row}'], is_header=True)
-    row += 1
-    
-    # Capital Account
-    ws[f'A{row}'] = "Capital Account"
-    ws[f'B{row}'] = "1"
-    ws[f'C{row}'] = st.session_state.financial_statements['balance_sheet']['liabilities']['capital']['total']
-    
-    apply_cell_style(ws[f'A{row}'], indent_level=1)
-    apply_cell_style(ws[f'B{row}'])
-    apply_cell_style(ws[f'C{row}'])
-    row += 1
-    
-    # Reserves and Surplus
-    ws[f'A{row}'] = "Reserves and Surplus"
-    ws[f'B{row}'] = "2"
-    ws[f'C{row}'] = st.session_state.financial_statements['balance_sheet']['liabilities']['reserves']['total']
-    
-    apply_cell_style(ws[f'A{row}'], indent_level=1)
-    apply_cell_style(ws[f'B{row}'])
-    apply_cell_style(ws[f'C{row}'])
-    row += 1
-    
-    # Long Term Loans
-    ws[f'A{row}'] = "Long Term Loans"
-    ws[f'B{row}'] = "3"
-    ws[f'C{row}'] = st.session_state.financial_statements['balance_sheet']['liabilities']['long_term_loans']['total']
-    
-    apply_cell_style(ws[f'A{row}'], indent_level=1)
-    apply_cell_style(ws[f'B{row}'])
-    apply_cell_style(ws[f'C{row}'])
-    row += 1
-    
-    # Current Liabilities
-    ws[f'A{row}'] = "Current Liabilities"
-    ws[f'B{row}'] = "4"
-    ws[f'C{row}'] = st.session_state.financial_statements['balance_sheet']['liabilities']['current_liabilities']['total']
-    
-    apply_cell_style(ws[f'A{row}'], indent_level=1)
-    apply_cell_style(ws[f'B{row}'])
-    apply_cell_style(ws[f'C{row}'])
-    row += 1
-    
-    # Total Liabilities
-    total_liabilities = (
-        st.session_state.financial_statements['balance_sheet']['liabilities']['capital']['total'] +
-        st.session_state.financial_statements['balance_sheet']['liabilities']['reserves']['total'] +
-        st.session_state.financial_statements['balance_sheet']['liabilities']['long_term_loans']['total'] +
-        st.session_state.financial_statements['balance_sheet']['liabilities']['current_liabilities']['total']
-    )
-    
-    ws[f'A{row}'] = "Total Liabilities"
-    ws[f'C{row}'] = total_liabilities
-    
-    apply_cell_style(ws[f'A{row}'], is_total=True)
-    apply_cell_style(ws[f'B{row}'])
-    apply_cell_style(ws[f'C{row}'], is_total=True)
-    row += 2
-    
-    # ASSETS
-    ws[f'A{row}'] = "ASSETS"
-    apply_cell_style(ws[f'A{row}'], is_header=True)
-    row += 1
-    
-    # Fixed Assets
-    ws[f'A{row}'] = "Fixed Assets"
-    ws[f'B{row}'] = "5"
-    ws[f'C{row}'] = st.session_state.financial_statements['balance_sheet']['assets']['fixed_assets']['total']
-    
-    apply_cell_style(ws[f'A{row}'], indent_level=1)
-    apply_cell_style(ws[f'B{row}'])
-    apply_cell_style(ws[f'C{row}'])
-    row += 1
-    
-    # Investments
-    ws[f'A{row}'] = "Investments"
-    ws[f'B{row}'] = "6"
-    ws[f'C{row}'] = st.session_state.financial_statements['balance_sheet']['assets']['investments']['total']
-    
-    apply_cell_style(ws[f'A{row}'], indent_level=1)
-    apply_cell_style(ws[f'B{row}'])
-    apply_cell_style(ws[f'C{row}'])
-    row += 1
-    
-    # Current Assets
-    ws[f'A{row}'] = "Current Assets"
-    ws[f'B{row}'] = "7"
-    ws[f'C{row}'] = st.session_state.financial_statements['balance_sheet']['assets']['current_assets']['total']
-    
-    apply_cell_style(ws[f'A{row}'], indent_level=1)
-    apply_cell_style(ws[f'B{row}'])
-    apply_cell_style(ws[f'C{row}'])
-    row += 1
-    
-    # Total Assets
-    total_assets = (
-        st.session_state.financial_statements['balance_sheet']['assets']['fixed_assets']['total'] +
-        st.session_state.financial_statements['balance_sheet']['assets']['investments']['total'] +
-        st.session_state.financial_statements['balance_sheet']['assets']['current_assets']['total']
-    )
-    
-    ws[f'A{row}'] = "Total Assets"
-    ws[f'C{row}'] = total_assets
-    
-    apply_cell_style(ws[f'A{row}'], is_total=True)
-    apply_cell_style(ws[f'B{row}'])
-    apply_cell_style(ws[f'C{row}'], is_total=True)
-    
-    # P&L Sheet
-    ws2 = wb.create_sheet("Profit and Loss")
-    
-    # Add headers
-    ws2['A1'] = "Financial Statements"
-    ws2['A1'].font = Font(bold=True, size=14)
-    
-    ws2['A2'] = "Statement of Profit and Loss for the year ended " + datetime.now().strftime("%d-%m-%Y")
-    ws2['A2'].font = Font(bold=True, size=12)
-    
-    ws2['A4'] = "Particulars"
-    ws2['B4'] = "Note No."
-    ws2['C4'] = "Amount (₹)"
-    
-    apply_cell_style(ws2['A4'], is_header=True)
-    apply_cell_style(ws2['B4'], is_header=True)
-    apply_cell_style(ws2['C4'], is_header=True)
-    
-    # Add P&L data
-    row = 5
-    
-    # INCOME
-    ws2[f'A{row}'] = "INCOME"
-    apply_cell_style(ws2[f'A{row}'], is_header=True)
-    row += 1
-    
-    # Revenue
-    ws2[f'A{row}'] = "Revenue from Operations"
-    ws2[f'B{row}'] = "8"
-    ws2[f'C{row}'] = st.session_state.financial_statements['profit_and_loss']['income']['revenue']['total']
-    
-    apply_cell_style(ws2[f'A{row}'], indent_level=1)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'])
-    row += 1
-    
-    # Other Income
-    ws2[f'A{row}'] = "Other Income"
-    ws2[f'B{row}'] = "9"
-    ws2[f'C{row}'] = st.session_state.financial_statements['profit_and_loss']['income']['other_income']['total']
-    
-    apply_cell_style(ws2[f'A{row}'], indent_level=1)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'])
-    row += 1
-    
-    # Total Income
-    total_income = (
-        st.session_state.financial_statements['profit_and_loss']['income']['revenue']['total'] +
-        st.session_state.financial_statements['profit_and_loss']['income']['other_income']['total']
-    )
-    
-    ws2[f'A{row}'] = "Total Income"
-    ws2[f'C{row}'] = total_income
-    
-    apply_cell_style(ws2[f'A{row}'], is_subtotal=True)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'], is_subtotal=True)
-    row += 2
-    
-    # EXPENSES
-    ws2[f'A{row}'] = "EXPENSES"
-    apply_cell_style(ws2[f'A{row}'], is_header=True)
-    row += 1
-    
-    # COGS
-    ws2[f'A{row}'] = "Cost of Goods Sold"
-    ws2[f'B{row}'] = "10"
-    ws2[f'C{row}'] = st.session_state.financial_statements['profit_and_loss']['expenses']['cogs']['total']
-    
-    apply_cell_style(ws2[f'A{row}'], indent_level=1)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'])
-    row += 1
-    
-    # Employee Benefits
-    ws2[f'A{row}'] = "Employee Benefits Expense"
-    ws2[f'B{row}'] = "11"
-    ws2[f'C{row}'] = st.session_state.financial_statements['profit_and_loss']['expenses']['employee_benefits']['total']
-    
-    apply_cell_style(ws2[f'A{row}'], indent_level=1)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'])
-    row += 1
-    
-    # Finance Costs
-    ws2[f'A{row}'] = "Finance Costs"
-    ws2[f'B{row}'] = "12"
-    ws2[f'C{row}'] = st.session_state.financial_statements['profit_and_loss']['expenses']['finance_costs']['total']
-    
-    apply_cell_style(ws2[f'A{row}'], indent_level=1)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'])
-    row += 1
-    
-    # Depreciation
-    ws2[f'A{row}'] = "Depreciation"
-    ws2[f'B{row}'] = "13"
-    ws2[f'C{row}'] = st.session_state.financial_statements['profit_and_loss']['expenses']['depreciation']['total']
-    
-    apply_cell_style(ws2[f'A{row}'], indent_level=1)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'])
-    row += 1
-    
-    # Other Expenses
-    ws2[f'A{row}'] = "Other Expenses"
-    ws2[f'B{row}'] = "14"
-    ws2[f'C{row}'] = st.session_state.financial_statements['profit_and_loss']['expenses']['other_expenses']['total']
-    
-    apply_cell_style(ws2[f'A{row}'], indent_level=1)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'])
-    row += 1
-    
-    # Total Expenses
-    total_expenses = (
-        st.session_state.financial_statements['profit_and_loss']['expenses']['cogs']['total'] +
-        st.session_state.financial_statements['profit_and_loss']['expenses']['employee_benefits']['total'] +
-        st.session_state.financial_statements['profit_and_loss']['expenses']['finance_costs']['total'] +
-        st.session_state.financial_statements['profit_and_loss']['expenses']['depreciation']['total'] +
-        st.session_state.financial_statements['profit_and_loss']['expenses']['other_expenses']['total']
-    )
-    
-    ws2[f'A{row}'] = "Total Expenses"
-    ws2[f'C{row}'] = total_expenses
-    
-    apply_cell_style(ws2[f'A{row}'], is_subtotal=True)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'], is_subtotal=True)
-    row += 2
-    
-    # Profit Before Tax
-    profit = total_income - total_expenses
-    ws2[f'A{row}'] = "Profit Before Tax"
-    ws2[f'C{row}'] = profit
-    
-    apply_cell_style(ws2[f'A{row}'], is_total=True)
-    apply_cell_style(ws2[f'B{row}'])
-    apply_cell_style(ws2[f'C{row}'], is_total=True)
-    
-    # Create Sub-schedule sheets
-    # BS Sub-Schedules
-    schedule_sheet = wb.create_sheet("BS Schedules")
-    
-    schedule_sheet['A1'] = "Balance Sheet Schedules"
-    schedule_sheet['A1'].font = Font(bold=True, size=14)
-    
-    current_row = 3
-    schedule_num = 1
-    
-    # Add each schedule from our financial statements
-    for category_key, category_data in st.session_state.financial_statements['sub_schedules'].items():
-        # Only process Balance Sheet schedules here
-        if not category_key.startswith('BS_'):
-            continue
+    # Create Excel writer
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Balance Sheet Sheet
+        balance_sheet_data = []
+        
+        # Add Balance Sheet Header
+        balance_sheet_data.append(["Financial Statements", "", ""])
+        balance_sheet_data.append(["Balance Sheet as at " + datetime.now().strftime("%d-%m-%Y"), "", ""])
+        balance_sheet_data.append(["", "", ""])
+        balance_sheet_data.append(["Particulars", "Note No.", "Amount (₹)"])
+        
+        # EQUITY AND LIABILITIES
+        balance_sheet_data.append(["EQUITY AND LIABILITIES", "", ""])
+        
+        # Capital Account
+        balance_sheet_data.append(["    Capital Account", "1", 
+                                  st.session_state.financial_statements['balance_sheet']['liabilities']['capital']['total']])
+        
+        # Reserves and Surplus
+        balance_sheet_data.append(["    Reserves and Surplus", "2", 
+                                  st.session_state.financial_statements['balance_sheet']['liabilities']['reserves']['total']])
+        
+        # Long Term Loans
+        balance_sheet_data.append(["    Long Term Loans", "3", 
+                                  st.session_state.financial_statements['balance_sheet']['liabilities']['long_term_loans']['total']])
+        
+        # Current Liabilities
+        balance_sheet_data.append(["    Current Liabilities", "4", 
+                                  st.session_state.financial_statements['balance_sheet']['liabilities']['current_liabilities']['total']])
+        
+        # Total Liabilities
+        total_liabilities = (
+            st.session_state.financial_statements['balance_sheet']['liabilities']['capital']['total'] +
+            st.session_state.financial_statements['balance_sheet']['liabilities']['reserves']['total'] +
+            st.session_state.financial_statements['balance_sheet']['liabilities']['long_term_loans']['total'] +
+            st.session_state.financial_statements['balance_sheet']['liabilities']['current_liabilities']['total']
+        )
+        
+        balance_sheet_data.append(["Total Liabilities", "", total_liabilities])
+        balance_sheet_data.append(["", "", ""])
+        
+        # ASSETS
+        balance_sheet_data.append(["ASSETS", "", ""])
+        
+        # Fixed Assets
+        balance_sheet_data.append(["    Fixed Assets", "5", 
+                                  st.session_state.financial_statements['balance_sheet']['assets']['fixed_assets']['total']])
+        
+        # Investments
+        balance_sheet_data.append(["    Investments", "6", 
+                                  st.session_state.financial_statements['balance_sheet']['assets']['investments']['total']])
+        
+        # Current Assets
+        balance_sheet_data.append(["    Current Assets", "7", 
+                                  st.session_state.financial_statements['balance_sheet']['assets']['current_assets']['total']])
+        
+        # Total Assets
+        total_assets = (
+            st.session_state.financial_statements['balance_sheet']['assets']['fixed_assets']['total'] +
+            st.session_state.financial_statements['balance_sheet']['assets']['investments']['total'] +
+            st.session_state.financial_statements['balance_sheet']['assets']['current_assets']['total']
+        )
+        
+        balance_sheet_data.append(["Total Assets", "", total_assets])
+        
+        # Create Balance Sheet DataFrame and write to Excel
+        bs_df = pd.DataFrame(balance_sheet_data)
+        bs_df.to_excel(writer, sheet_name="Balance Sheet", header=False, index=False)
+        
+        # P&L Sheet
+        pl_data = []
+        
+        # Add P&L Header
+        pl_data.append(["Financial Statements", "", ""])
+        pl_data.append(["Statement of Profit and Loss for the year ended " + datetime.now().strftime("%d-%m-%Y"), "", ""])
+        pl_data.append(["", "", ""])
+        pl_data.append(["Particulars", "Note No.", "Amount (₹)"])
+        
+        # INCOME
+        pl_data.append(["INCOME", "", ""])
+        
+        # Revenue
+        pl_data.append(["    Revenue from Operations", "8", 
+                       st.session_state.financial_statements['profit_and_loss']['income']['revenue']['total']])
+        
+        # Other Income
+        pl_data.append(["    Other Income", "9", 
+                       st.session_state.financial_statements['profit_and_loss']['income']['other_income']['total']])
+        
+        # Total Income
+        total_income = (
+            st.session_state.financial_statements['profit_and_loss']['income']['revenue']['total'] +
+            st.session_state.financial_statements['profit_and_loss']['income']['other_income']['total']
+        )
+        
+        pl_data.append(["Total Income", "", total_income])
+        pl_data.append(["", "", ""])
+        
+        # EXPENSES
+        pl_data.append(["EXPENSES", "", ""])
+        
+        # COGS
+        pl_data.append(["    Cost of Goods Sold", "10", 
+                       st.session_state.financial_statements['profit_and_loss']['expenses']['cogs']['total']])
+        
+        # Employee Benefits
+        pl_data.append(["    Employee Benefits Expense", "11", 
+                       st.session_state.financial_statements['profit_and_loss']['expenses']['employee_benefits']['total']])
+        
+        # Finance Costs
+        pl_data.append(["    Finance Costs", "12", 
+                       st.session_state.financial_statements['profit_and_loss']['expenses']['finance_costs']['total']])
+        
+        # Depreciation
+        pl_data.append(["    Depreciation", "13", 
+                       st.session_state.financial_statements['profit_and_loss']['expenses']['depreciation']['total']])
+        
+        # Other Expenses
+        pl_data.append(["    Other Expenses", "14", 
+                       st.session_state.financial_statements['profit_and_loss']['expenses']['other_expenses']['total']])
+        
+        # Total Expenses
+        total_expenses = (
+            st.session_state.financial_statements['profit_and_loss']['expenses']['cogs']['total'] +
+            st.session_state.financial_statements['profit_and_loss']['expenses']['employee_benefits']['total'] +
+            st.session_state.financial_statements['profit_and_loss']['expenses']['finance_costs']['total'] +
+            st.session_state.financial_statements['profit_and_loss']['expenses']['depreciation']['total'] +
+            st.session_state.financial_statements['profit_and_loss']['expenses']['other_expenses']['total']
+        )
+        
+        pl_data.append(["Total Expenses", "", total_expenses])
+        pl_data.append(["", "", ""])
+        
+        # Profit Before Tax
+        profit = total_income - total_expenses
+        pl_data.append(["Profit Before Tax", "", profit])
+        
+        # Create P&L DataFrame and write to Excel
+        pl_df = pd.DataFrame(pl_data)
+        pl_df.to_excel(writer, sheet_name="Profit and Loss", header=False, index=False)
+        
+        # BS Schedules
+        bs_schedule_data = []
+        
+        # Add header
+        bs_schedule_data.append(["Balance Sheet Schedules", "", ""])
+        bs_schedule_data.append(["", "", ""])
+        
+        schedule_num = 1
+        
+        # Add each BS schedule
+        for category_key, category_data in st.session_state.financial_statements['sub_schedules'].items():
+            # Only process Balance Sheet schedules here
+            if not category_key.startswith('BS_'):
+                continue
+                
+            # Get category name
+            category_name = category_data['name']
             
-        # Get category name
-        category_name = category_data['name']
-        
-        # Add schedule header
-        schedule_sheet[f'A{current_row}'] = f"Schedule {schedule_num}: {category_name}"
-        schedule_sheet[f'A{current_row}'].font = Font(bold=True, size=12)
-        current_row += 2
-        
-        # Add column headers
-        schedule_sheet[f'A{current_row}'] = "Particulars"
-        schedule_sheet[f'B{current_row}'] = "Amount (₹)"
-        
-        apply_cell_style(schedule_sheet[f'A{current_row}'], is_header=True)
-        apply_cell_style(schedule_sheet[f'B{current_row}'], is_header=True)
-        current_row += 1
-        
-        # Add sub-category items
-        total = 0
-        for sub_key, sub_data in category_data['items'].items():
-            amount = sub_data['amount']
-            total += amount
+            bs_schedule_data.append([f"Schedule {schedule_num}: {category_name}", "", ""])
+            bs_schedule_data.append(["", "", ""])
+            bs_schedule_data.append(["Particulars", "Amount (₹)", ""])
             
-            schedule_sheet[f'A{current_row}'] = sub_data['name']
-            schedule_sheet[f'B{current_row}'] = amount
+            # Add sub-category items
+            total = 0
+            for sub_key, sub_data in category_data['items'].items():
+                amount = sub_data['amount']
+                if amount > 0:
+                    bs_schedule_data.append([f"    {sub_data['name']}", amount, ""])
+                    total += amount
             
-            apply_cell_style(schedule_sheet[f'A{current_row}'], indent_level=1)
-            apply_cell_style(schedule_sheet[f'B{current_row}'])
-            current_row += 1
-        
-        # Add total
-        schedule_sheet[f'A{current_row}'] = f"Total {category_name}"
-        schedule_sheet[f'B{current_row}'] = total
-        
-        apply_cell_style(schedule_sheet[f'A{current_row}'], is_total=True)
-        apply_cell_style(schedule_sheet[f'B{current_row}'], is_total=True)
-        current_row += 3
-        
-        schedule_num += 1
-    
-    # PL Sub-Schedules
-    pl_schedule_sheet = wb.create_sheet("PL Schedules")
-    
-    pl_schedule_sheet['A1'] = "Profit & Loss Schedules"
-    pl_schedule_sheet['A1'].font = Font(bold=True, size=14)
-    
-    current_row = 3
-    schedule_num = 8  # Continue schedule numbering from BS
-    
-    # Add each schedule from our financial statements
-    for category_key, category_data in st.session_state.financial_statements['sub_schedules'].items():
-        # Only process P&L schedules here
-        if not category_key.startswith('PL_'):
-            continue
+            # Add total
+            bs_schedule_data.append([f"Total {category_name}", total, ""])
+            bs_schedule_data.append(["", "", ""])
             
-        # Get category name
-        category_name = category_data['name']
+            schedule_num += 1
         
-        # Add schedule header
-        pl_schedule_sheet[f'A{current_row}'] = f"Schedule {schedule_num}: {category_name}"
-        pl_schedule_sheet[f'A{current_row}'].font = Font(bold=True, size=12)
-        current_row += 2
+        # Create BS Schedules DataFrame and write to Excel
+        bs_schedules_df = pd.DataFrame(bs_schedule_data)
+        bs_schedules_df.to_excel(writer, sheet_name="BS Schedules", header=False, index=False)
         
-        # Add column headers
-        pl_schedule_sheet[f'A{current_row}'] = "Particulars"
-        pl_schedule_sheet[f'B{current_row}'] = "Amount (₹)"
+        # PL Schedules
+        pl_schedule_data = []
         
-        apply_cell_style(pl_schedule_sheet[f'A{current_row}'], is_header=True)
-        apply_cell_style(pl_schedule_sheet[f'B{current_row}'], is_header=True)
-        current_row += 1
+        # Add header
+        pl_schedule_data.append(["Profit & Loss Schedules", "", ""])
+        pl_schedule_data.append(["", "", ""])
         
-        # Add sub-category items
-        total = 0
-        for sub_key, sub_data in category_data['items'].items():
-            amount = sub_data['amount']
-            total += amount
+        schedule_num = 8  # Continue schedule numbering from BS
+        
+        # Add each PL schedule
+        for category_key, category_data in st.session_state.financial_statements['sub_schedules'].items():
+            # Only process P&L schedules here
+            if not category_key.startswith('PL_'):
+                continue
+                
+            # Get category name
+            category_name = category_data['name']
             
-            pl_schedule_sheet[f'A{current_row}'] = sub_data['name']
-            pl_schedule_sheet[f'B{current_row}'] = amount
+            pl_schedule_data.append([f"Schedule {schedule_num}: {category_name}", "", ""])
+            pl_schedule_data.append(["", "", ""])
+            pl_schedule_data.append(["Particulars", "Amount (₹)", ""])
             
-            apply_cell_style(pl_schedule_sheet[f'A{current_row}'], indent_level=1)
-            apply_cell_style(pl_schedule_sheet[f'B{current_row}'])
-            current_row += 1
+            # Add sub-category items
+            total = 0
+            for sub_key, sub_data in category_data['items'].items():
+                amount = sub_data['amount']
+                if amount > 0:
+                    pl_schedule_data.append([f"    {sub_data['name']}", amount, ""])
+                    total += amount
+            
+            # Add total
+            pl_schedule_data.append([f"Total {category_name}", total, ""])
+            pl_schedule_data.append(["", "", ""])
+            
+            schedule_num += 1
         
-        # Add total
-        pl_schedule_sheet[f'A{current_row}'] = f"Total {category_name}"
-        pl_schedule_sheet[f'B{current_row}'] = total
+        # Create PL Schedules DataFrame and write to Excel
+        pl_schedules_df = pd.DataFrame(pl_schedule_data)
+        pl_schedules_df.to_excel(writer, sheet_name="PL Schedules", header=False, index=False)
         
-        apply_cell_style(pl_schedule_sheet[f'A{current_row}'], is_total=True)
-        apply_cell_style(pl_schedule_sheet[f'B{current_row}'], is_total=True)
-        current_row += 3
+        # Notes Sheet
+        notes_data = []
         
-        schedule_num += 1
+        # Add header
+        notes_data.append(["Notes to Financial Statements", "", ""])
+        notes_data.append(["", "", ""])
+        
+        # Note 1: Capital Account
+        notes_data.append(["Note 1: Capital Account", "", ""])
+        notes_data.append(["", "", ""])
+        notes_data.append(["Particulars", "Amount (₹)", ""])
+        
+        # Add Note 1 details
+        notes_data.append(["Opening Balance", 
+                         st.session_state.financial_statements['notes']['note1_capital']['opening_balance'], ""])
+        
+        notes_data.append(["Add: Capital Introduced", 
+                         st.session_state.financial_statements['notes']['note1_capital']['additions'], ""])
+        
+        notes_data.append(["Total", 
+                         (st.session_state.financial_statements['notes']['note1_capital']['opening_balance'] +
+                          st.session_state.financial_statements['notes']['note1_capital']['additions']), ""])
+        
+        # Create Notes DataFrame and write to Excel
+        notes_df = pd.DataFrame(notes_data)
+        notes_df.to_excel(writer, sheet_name="Notes", header=False, index=False)
+        
+        # Set column widths in each sheet
+        workbook = writer.book
+        
+        for sheet_name in writer.sheets:
+            worksheet = writer.sheets[sheet_name]
+            worksheet.set_column('A:A', 40)
+            worksheet.set_column('B:B', 15)
+            worksheet.set_column('C:C', 20)
+            
+            # Add bold format for headers
+            bold_format = workbook.add_format({'bold': True})
+            for row in range(5):
+                worksheet.set_row(row, None, bold_format)
     
-    # Notes Sheet
-    notes_sheet = wb.create_sheet("Notes")
-    
-    notes_sheet['A1'] = "Notes to Financial Statements"
-    notes_sheet['A1'].font = Font(bold=True, size=14)
-    
-    # Note 1: Capital Account
-    notes_sheet['A3'] = "Note 1: Capital Account"
-    notes_sheet['A3'].font = Font(bold=True, size=12)
-    
-    notes_sheet['A5'] = "Particulars"
-    notes_sheet['B5'] = "Amount (₹)"
-    
-    apply_cell_style(notes_sheet['A5'], is_header=True)
-    apply_cell_style(notes_sheet['B5'], is_header=True)
-    
-    notes_sheet['A6'] = "Opening Balance"
-    notes_sheet['B6'] = st.session_state.financial_statements['notes']['note1_capital']['opening_balance']
-    
-    apply_cell_style(notes_sheet['A6'])
-    apply_cell_style(notes_sheet['B6'])
-    
-    notes_sheet['A7'] = "Add: Capital Introduced"
-    notes_sheet['B7'] = st.session_state.financial_statements['notes']['note1_capital']['additions']
-    
-    apply_cell_style(notes_sheet['A7'])
-    apply_cell_style(notes_sheet['B7'])
-    
-    notes_sheet['A8'] = "Total"
-    notes_sheet['B8'] = (
-        st.session_state.financial_statements['notes']['note1_capital']['opening_balance'] +
-        st.session_state.financial_statements['notes']['note1_capital']['additions']
-    )
-    
-    apply_cell_style(notes_sheet['A8'], is_total=True)
-    apply_cell_style(notes_sheet['B8'], is_total=True)
-    
-    # Set column widths
-    for sheet in wb.worksheets:
-        sheet.column_dimensions['A'].width = 40
-        sheet.column_dimensions['B'].width = 15
-        sheet.column_dimensions['C'].width = 20
-    
-    # Save the workbook to the BytesIO object
-    wb.save(output)
+    # Reset buffer position to the beginning
     output.seek(0)
     
     return output
@@ -1160,6 +961,83 @@ def get_download_link(buffer, filename, text):
     b64 = base64.b64encode(buffer.getvalue()).decode()
     href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}">{text}</a>'
     return href
+
+# Function to export to CSV (fallback option if Excel export fails)
+def export_to_csv():
+    # Create a BytesIO object
+    output = BytesIO()
+    
+    # Balance Sheet
+    bs_data = []
+    
+    # Add Balance Sheet Header
+    bs_data.append(["Financial Statements", "", ""])
+    bs_data.append(["Balance Sheet as at " + datetime.now().strftime("%d-%m-%Y"), "", ""])
+    bs_data.append(["", "", ""])
+    bs_data.append(["Particulars", "Note No.", "Amount (₹)"])
+    
+    # EQUITY AND LIABILITIES
+    bs_data.append(["EQUITY AND LIABILITIES", "", ""])
+    
+    # Capital Account
+    bs_data.append(["    Capital Account", "1", 
+                   st.session_state.financial_statements['balance_sheet']['liabilities']['capital']['total']])
+    
+    # Reserves and Surplus
+    bs_data.append(["    Reserves and Surplus", "2", 
+                   st.session_state.financial_statements['balance_sheet']['liabilities']['reserves']['total']])
+    
+    # Long Term Loans
+    bs_data.append(["    Long Term Loans", "3", 
+                   st.session_state.financial_statements['balance_sheet']['liabilities']['long_term_loans']['total']])
+    
+    # Current Liabilities
+    bs_data.append(["    Current Liabilities", "4", 
+                   st.session_state.financial_statements['balance_sheet']['liabilities']['current_liabilities']['total']])
+    
+    # Total Liabilities
+    total_liabilities = (
+        st.session_state.financial_statements['balance_sheet']['liabilities']['capital']['total'] +
+        st.session_state.financial_statements['balance_sheet']['liabilities']['reserves']['total'] +
+        st.session_state.financial_statements['balance_sheet']['liabilities']['long_term_loans']['total'] +
+        st.session_state.financial_statements['balance_sheet']['liabilities']['current_liabilities']['total']
+    )
+    
+    bs_data.append(["Total Liabilities", "", total_liabilities])
+    bs_data.append(["", "", ""])
+    
+    # ASSETS
+    bs_data.append(["ASSETS", "", ""])
+    
+    # Fixed Assets
+    bs_data.append(["    Fixed Assets", "5", 
+                   st.session_state.financial_statements['balance_sheet']['assets']['fixed_assets']['total']])
+    
+    # Investments
+    bs_data.append(["    Investments", "6", 
+                   st.session_state.financial_statements['balance_sheet']['assets']['investments']['total']])
+    
+    # Current Assets
+    bs_data.append(["    Current Assets", "7", 
+                   st.session_state.financial_statements['balance_sheet']['assets']['current_assets']['total']])
+    
+    # Total Assets
+    total_assets = (
+        st.session_state.financial_statements['balance_sheet']['assets']['fixed_assets']['total'] +
+        st.session_state.financial_statements['balance_sheet']['assets']['investments']['total'] +
+        st.session_state.financial_statements['balance_sheet']['assets']['current_assets']['total']
+    )
+    
+    bs_data.append(["Total Assets", "", total_assets])
+    
+    # Create Balance Sheet DataFrame and write to CSV
+    bs_df = pd.DataFrame(bs_data)
+    bs_df.to_csv(output, index=False, header=False)
+    
+    # Reset buffer position to the beginning
+    output.seek(0)
+    
+    return output
 
 # Function to handle the "Add Sample Data" button
 def add_sample_data():
@@ -1383,40 +1261,6 @@ if selected_tab == "Upload Files":
                     }
                     st.success("Manual ledgers added successfully!")
                     rerun_app()
-    
-    # Optional: Also allow uploading Excel template
-    st.markdown("---")
-    excel_template = st.file_uploader("Upload Financial Statement Excel Template (Optional)", type=["xlsx"])
-    if excel_template is not None:
-        try:
-            # Read the Excel file
-            excel_data = excel_template.read()
-            st.session_state.excel_template = excel_data
-            
-            # Try to display information about the template
-            wb = openpyxl.load_workbook(BytesIO(excel_data))
-            sheet_names = wb.sheetnames
-            
-            st.success(f"Excel template uploaded successfully! Contains {len(sheet_names)} sheets.")
-            
-            if debug_mode:
-                st.write("Sheet names:", ", ".join(sheet_names))
-                
-                # Show a preview of the first sheet
-                first_sheet = wb[sheet_names[0]]
-                data = []
-                for row in first_sheet.iter_rows(max_row=5):
-                    row_data = []
-                    for cell in row:
-                        row_data.append(cell.value)
-                    data.append(row_data)
-                
-                st.write("Preview of first sheet:")
-                st.dataframe(pd.DataFrame(data))
-        except Exception as e:
-            st.error(f"Error processing Excel template: {str(e)}")
-            if debug_mode:
-                st.exception(e)
 
 elif selected_tab == "Account Mapping":
     st.header("Account Mapping with Sub-Schedules")
@@ -2000,16 +1844,28 @@ elif selected_tab == "View Statements":
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("Export as Excel"):
-                excel_buffer = export_to_excel()
-                st.markdown(
-                    get_download_link(excel_buffer, "financial_statements.xlsx", "Download Excel File"),
-                    unsafe_allow_html=True
-                )
+            try:
+                # Try to use pandas Excel export
+                if st.button("Export as Excel"):
+                    excel_buffer = export_to_excel()
+                    st.markdown(
+                        get_download_link(excel_buffer, "financial_statements.xlsx", "Download Excel File"),
+                        unsafe_allow_html=True
+                    )
+            except Exception as e:
+                if debug_mode:
+                    st.error(f"Excel export error: {str(e)}")
+                # Fall back to CSV export
+                if st.button("Export as CSV"):
+                    csv_buffer = export_to_csv()
+                    st.markdown(
+                        get_download_link(csv_buffer, "financial_statements.csv", "Download CSV File"),
+                        unsafe_allow_html=True
+                    )
         
         with col2:
             if st.button("Export as PDF"):
-                st.info("PDF export functionality would be implemented here")
+                st.info("PDF export functionality would be implemented in a future version")
 
 elif selected_tab == "Version History":
     st.header("Version History")
@@ -2048,6 +1904,15 @@ elif selected_tab == "Version History":
                     st.session_state.financial_statements = version['financial_statements']
                 st.success(f"Loaded {selected_version}")
                 rerun_app()
+
+# Footer with deployment info
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center">
+    <p style="color: #888; font-size: 0.8em;">Financial Statements Preparation System v1.0</p>
+    <p style="color: #888; font-size: 0.8em;">Deployed on Streamlit Community Cloud</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Add some styling
 st.markdown("""
